@@ -1,97 +1,130 @@
 package uniandes;
 
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 public class Buffer {
 
-	private Mensaje[] contenido;
+	/**
+	 * Lista del contenido que se encuentra en el buffer.
+	 */
+	private List<Mensaje> contenido;
 
-	private int tamano;
-
-	private int tamanoOriginal;
+	/**
+	 * Tamaño límite del buffer.
+	 */
+	private int tamaño;
 	
-	private int contador;
+	/**
+	 * Número de clientes que accederán al buffer.
+	 */
+	private int numeroClientes;
+
 	
-
-
-	public Buffer(int n){
-		this.contenido = new Mensaje[n];
-		this.tamano = n;
-		this.tamanoOriginal= n;
-		this.contador=0;
-
+	public Buffer(int tamaño,int numeroClientes) {
+		this.contenido = new LinkedList<>();
+		this.tamaño = tamaño;
+		this.numeroClientes=numeroClientes;
 	}
-
-
-	public synchronized void enviar(Cliente cli){
-		System.out.println("entro cliente: "+cli.getId()+"con msg: "+cli.getMensaje());
-		tamano--;
-
-		if(tamano>=0){
-			Mensaje actual = cli.crearMensaje();
-			contenido[contador]= actual;
-			if(contador<tamano-2) {
-				contador++;
-			}
-			else {
-				contador = 0;
-			}
+	
+	
+	public synchronized void enviar(Mensaje mensaje) {
+		while (contenido.size() == tamaño) {
 			try {
-				this.wait();
+				wait();
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			cli.setMensaje(actual);
-			tamano++;
+			Thread.yield();//Cede el procesador después de cada intento.
 		}
-		else{
-			Cliente.yield();
-
-
-
+		String buffer = "Buffer: ";//Variable para no tener que escribir siempre "Buffer: " en los sysout
+		System.out.println(buffer+"hay espacio para mensajes.");
+		contenido.add(mensaje);
+		if (contenido.size() == 1) {//Si antes no había contenido despierta a los servidores.
+			notifyAll();
 		}
-
-	}
-
-	public synchronized void recibir(Servidor serv){
-
-		if(tamanoOriginal>tamano){
-			for(int i = 0;i<=contador;i++) {
-				Mensaje msg = contenido[i];
-				if(msg.isMod()==false) {
-					msg.setMensaje(msg.getMensaje()+1);
-					msg.setMod(true);
-					System.out.println(msg.getMensaje());
-					break;
-				}
+		while(!mensaje.fueModificado()) {//Mientras no hayan respondido el mensaje el cliente se queda dormido.
+			try {
+				wait();
 			}
-			this.notify();
-			Servidor.yield();
-		}
-		else{
-
-				Servidor.yield();
+			catch(InterruptedException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
-	public static void main(String[] args){
-		Buffer buffer = new Buffer(1);
-		Double n =(Math.random()*100);
-		int f =n.intValue();
-		Cliente[] clientes = new Cliente[2];
-		Servidor[] servidores = new Servidor[2];
-		for(int i =0; i<2;i++) {
-			servidores[i]= new Servidor(buffer, i);
-			clientes[i] = new Cliente(i,i+1,buffer);
+	public synchronized void recibir() {
+		while (contenido.size() == 0 && numeroClientes>0) {//Mientras no haya mensajes pero no se haya atendido a todos los clientes.
+			try {
+				wait();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			if(numeroClientes==0) {
+				return;
+			}
+			System.out.println("esperando");
+			Thread.yield();
 		}
-		for(Cliente cli: clientes) {
-			cli.start();
+		if(numeroClientes==0) {//No va a haber más mensajes pues no hay más clientes.
+			return;
 		}
-		for(Servidor serv: servidores) {
-			serv.start();
-		}
+		String buffer = "Buffer: ";//Variable para no tener que escribir siempre "Buffer: " en los sysout
+		System.out.println(buffer + "hay mensajes pendientes.");
+		Mensaje mensaje = contenido.remove(contenido.size() - 1);
+		mensaje.setModificado(true);
+		System.out.println(buffer + "mensaje modificado " + mensaje.getMensaje());
+		notifyAll();//Modificó un mensaje, ahora le envía la notificación a todos los clientes para que revisen sus mensajes pendientes.
+		
+	}
+	
+	public synchronized int getNumeroClientes() {
+		return numeroClientes;
+	}
+	
+	public synchronized void reducirNumeroClientes() {
+		notifyAll();//Notifica a los servidores de que hay un cliente menos, de ese modo no se queda en espera si ya no hay clientes para atender.
+		--this.numeroClientes;
 	}
 
+	public static void main(String[] args) {
+		int tamañoBuffer = Double.valueOf(Math.random() * 100).intValue()+1; //Tamaño aleatorio del buffer.(mínimo 1)
+		int numeroClientes = Double.valueOf(Math.random() * 100).intValue()+1;//Número aleatorio de clientes.(mínimo 1)
+		Buffer buffer = new Buffer(tamañoBuffer,numeroClientes);
+		Cliente[] clientes = new Cliente[numeroClientes];
+		int numeroServidores = Double.valueOf(Math.random() * 10).intValue()+1;//Número aleatorio de servidores.(mínimo 1)
+		Servidor[] servidores = new Servidor[numeroServidores];
+		int i = 0;
+		for (Cliente cli : clientes) {
+			int numeroMensajes = Double.valueOf(Math.random() * 10).intValue()+1;//Número aleatorio de mensajes por cada cliente.(mínimo 1)
+			cli = new Cliente(i, numeroMensajes, buffer);
+			clientes[i++] = cli;
+		}
+		i = 0;
+		for (Servidor serv : servidores) {
+			serv = new Servidor(buffer, i);
+			servidores[i++] = serv;
+		}
+		int orden = Double.valueOf(Math.random() * 100).intValue() % 2; //Orden define si se inician primero los clientes o los servidores.
+		if (orden == 1) {
+			for (Cliente cli : clientes) {
+				cli.start();
+			}
+			for (Servidor serv : servidores) {
+				serv.start();
+			}
+		} else {
+			for (Servidor serv : servidores) {
+				serv.start();
+			}
+			for (Cliente cli : clientes) {
+				cli.start();
+			}
+		}
 
-
+	}
 
 }

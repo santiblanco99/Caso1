@@ -1,28 +1,29 @@
 package uniandes;
 
 public class Mensaje {
-	private int mensaje;
-	
-	private boolean mod = false;
-	
-	public boolean isMod() {
-		return mod;
+
+	private String contenido;
+
+	private boolean modificado;
+
+	public boolean fueModificado() {
+		return modificado;
 	}
 
-	public void setMod(boolean mod) {
-		this.mod = mod;
+	public void setModificado(boolean modificado) {
+		this.modificado = modificado;
 	}
 
-	public Mensaje(int n) {
-		this.mensaje = n;
+	public Mensaje(String contenido) {
+		this.contenido = contenido;
 	}
 
-	public int getMensaje() {
-		return mensaje;
+	public String getMensaje() {
+		return contenido;
 	}
 
-	public void setMensaje(int mensaje) {
-		this.mensaje = mensaje;
+	public void setMensaje(String contenido) {
+		this.contenido = contenido;
 	}
 
 }

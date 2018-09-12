@@ -2,23 +2,25 @@ package uniandes;
 
 public class Servidor extends Thread {
 	
-	private int mensaje;
-	
 	private int id;
 	
 	public Buffer buffer;
 	
 	
-	public Servidor(Buffer buffer,int n) {
+	public Servidor(Buffer buffer,int id) {
 		this.buffer = buffer;
-		this.id=n;
+		this.id=id;
 	}
 	
 	public void run() {
-		System.out.println("entra servidor con id: "+id);
-		this.buffer.recibir(this);
-		System.out.println("sale servidor con id: "+id);
-	
+		String servidor = "Servidor #"+id+": ";
+		System.out.println(servidor+"entré");
+		while(buffer.getNumeroClientes()>0) {
+			System.out.println(servidor+"quiero responder un mensaje");
+			buffer.recibir();
+			System.out.println(servidor+"respondí un mensaje");
+		}
+		System.out.println(servidor+"me apagué");
 	}
 	
 	

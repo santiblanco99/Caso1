@@ -1,43 +1,49 @@
 package uniandes;
 
+import java.util.List;
+
 public class Cliente extends Thread{
 	
+	/**
+	 * Identificación del cliente.
+	 */
 	private int id;
 	
-	private int msg;
+	/**
+	 * Lista de mensajes del cliente.
+	 */
+	private Mensaje[] mensajes;
 	
+	/**
+	 * Instancia del Buffer.
+	 */
 	private Buffer buffer;
 	
-	private Mensaje mensaje;
-	
-	public Mensaje getMensaje() {
-		return mensaje;
-	}
-
-	public void setMensaje(Mensaje mensaje) {
-		this.mensaje = mensaje;
-	}
-
-	public Cliente(int n, int msg, Buffer buffer) {
-		this.id = n;
-		this.msg = msg;
+	/**
+	 * Constructor de la clase Cliente
+	 * @param id Identificador del cliente.
+	 * @param numeroMensaje Número de consultas realizadas por el cliente.
+	 * @param buffer Instancia del Buffer.
+	 */
+	public Cliente(int id, int numeroMensajes, Buffer buffer) {
+		this.id = id;
+		this.mensajes = new Mensaje[numeroMensajes];
 		this.buffer = buffer;
 	}
 	
-	public Mensaje crearMensaje() {
-		Mensaje mensaje = new Mensaje(msg);
-		return mensaje;
-	}
-	
 	public void run() {
-		
-		System.out.println("entra cliente con id: "+id);
-		System.out.println("mensaje de cliente "+id + " = "+msg);
-		this.buffer.enviar(this);
-		System.out.println("Mensaje nuevo del cliente: " +id+" = "
-		+mensaje.getMensaje());
-		System.out.println("sale cliente con id: "+id);
-		
+		String cliente = "Cliente #"+id+": ";//Variable para no tener que escribir siempre "Cliente #id: " en los sysout
+		System.out.println(cliente+"entré.");
+		for(Mensaje mensaje:mensajes) {//Por cada mensaje quiere agregarlo al buffer.
+			int n = Double.valueOf(Math.random()*100).intValue();//Valor aleatorio del mensaje.
+			String m = "Mensaje #"+n;
+			mensaje = new Mensaje(m);
+			System.out.println(cliente+"quiero subir un mensaje#"+n);
+			buffer.enviar(mensaje);
+			System.out.println(cliente+"me respondieron mensaje#"+n);
+		}
+		buffer.reducirNumeroClientes();//Le avisa al buffer que se fue.
+		System.out.println(cliente+"salí.");
 	}
 	
 	
