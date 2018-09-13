@@ -1,5 +1,8 @@
 package uniandes;
 
+
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -17,20 +20,20 @@ public class Buffer {
 	 * Tamaño límite del buffer.
 	 */
 	private int tamaño;
-	
+
 	/**
 	 * Número de clientes que accederán al buffer.
 	 */
 	private int numeroClientes;
 
-	
+
 	public Buffer(int tamaño,int numeroClientes) {
 		this.contenido = new LinkedList<>();
 		this.tamaño = tamaño;
 		this.numeroClientes=numeroClientes;
 	}
-	
-	
+
+
 	public synchronized void enviar(Mensaje mensaje) {
 		while (contenido.size() == tamaño) {
 			try {
@@ -78,28 +81,32 @@ public class Buffer {
 		mensaje.setModificado(true);
 		System.out.println(buffer + "mensaje modificado " + mensaje.getMensaje());
 		notifyAll();//Modificó un mensaje, ahora le envía la notificación a todos los clientes para que revisen sus mensajes pendientes.
-		
+
 	}
-	
+
 	public synchronized int getNumeroClientes() {
 		return numeroClientes;
 	}
-	
+
 	public synchronized void reducirNumeroClientes() {
 		notifyAll();//Notifica a los servidores de que hay un cliente menos, de ese modo no se queda en espera si ya no hay clientes para atender.
 		--this.numeroClientes;
 	}
 
 	public static void main(String[] args) {
-		int tamañoBuffer = Double.valueOf(Math.random() * 100).intValue()+1; //Tamaño aleatorio del buffer.(mínimo 1)
-		int numeroClientes = Double.valueOf(Math.random() * 100).intValue()+1;//Número aleatorio de clientes.(mínimo 1)
+		int[] info = leerInfo();
+
+		
+		int numeroClientes = info[0];
+		int tamañoBuffer = info[3];
+		int numeroServidores = info[1];
+		int numeroMensajes = info[2];
+
 		Buffer buffer = new Buffer(tamañoBuffer,numeroClientes);
 		Cliente[] clientes = new Cliente[numeroClientes];
-		int numeroServidores = Double.valueOf(Math.random() * 10).intValue()+1;//Número aleatorio de servidores.(mínimo 1)
 		Servidor[] servidores = new Servidor[numeroServidores];
 		int i = 0;
 		for (Cliente cli : clientes) {
-			int numeroMensajes = Double.valueOf(Math.random() * 10).intValue()+1;//Número aleatorio de mensajes por cada cliente.(mínimo 1)
 			cli = new Cliente(i, numeroMensajes, buffer);
 			clientes[i++] = cli;
 		}
@@ -125,6 +132,38 @@ public class Buffer {
 			}
 		}
 
+
 	}
 
+	public static int[] leerInfo() {
+		int[]resp = new int[4];
+		try {
+			BufferedReader reader = new BufferedReader(new FileReader("data/info.txt"));
+			String line = reader.readLine();
+			System.out.println(line);
+
+			String [] info =line.split(",");
+			for(int i= 0; i< resp.length; i++) {
+				resp[i] = Integer.parseInt(info[i]);
+			}
+
+
+			reader.close();
+			return resp;
+		}
+		catch(Exception e) {
+			System.out.println("Error leyendo el archivo");
+
+		}
+
+		return resp;
+	}
+
+
+
 }
+
+
+
+
+
